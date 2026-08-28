@@ -130,3 +130,89 @@ async def change_status(
     )
 
     return the_status_result.scalar_one()
+
+async def get_closure_reason(
+    db: AsyncSession,
+    closure_reason_code: str,
+) -> dict | None:
+    """
+    Return a closure reason's rules, or None if the code is unknown.
+
+    requires_note and iteration_added are read rather than hardcoded, so the
+    reference data stays the single source of truth. Adding a reason later
+    means seeding a row, not editing Python.
+    """
+
+    the_reason_result = await db.execute(
+        text(
+            """
+            SELECT
+                code,
+                internal_label,
+                observer_label,
+                requires_note,
+                iteration_added
+            FROM closure_reason
+            WHERE code = :closure_reason_code
+            """
+        ),
+        {"closure_reason_code": closure_reason_code},
+    )
+
+    the_reason_row = the_reason_result.mappings().first()
+
+    if the_reason_row is None:
+        return None
+
+    return dict(the_reason_row)
+
+
+async def close_report(
+    db: AsyncSession,
+    report_reference: str,
+    coordinator_id: int,
+    closure_reason_code: str,
+    terminal_status_code: str,
+    note: str | None = None,
+    referred_to: str | None = None,
+) -> str:
+    """
+    Close a case through the only sanctioned path.
+
+    reefcare_close_report() writes the case_decision row and the terminal
+    status together, and routes the status move through
+    reefcare_change_status() so the case_event is written in the same
+    transaction. It checks ownership itself, unlike reefcare_change_status().
+
+    It returns the terminal status code.
+
+    IMPORTANT FOR CALLERS: trg_report_closure_reason is DEFERRABLE INITIALLY
+    DEFERRED, so a closure that violates it raises at COMMIT rather than here.
+    The caller must commit inside its own error handling, or a failed close
+    will look like a success.
+    """
+
+    the_closure_result = await db.execute(
+        text(
+            """
+            SELECT reefcare_close_report(
+                :report_reference,
+                :coordinator_id,
+                :closure_reason_code,
+                :terminal_status_code,
+                :note,
+                :referred_to
+            ) AS terminal_status_code
+            """
+        ),
+        {
+            "report_reference": report_reference,
+            "coordinator_id": coordinator_id,
+            "closure_reason_code": closure_reason_code,
+            "terminal_status_code": terminal_status_code,
+            "note": note,
+            "referred_to": referred_to,
+        },
+    )
+
+    return the_closure_result.scalar_one()

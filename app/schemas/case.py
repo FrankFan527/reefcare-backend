@@ -197,4 +197,60 @@ class ResponseTypeDecisionResponse(BaseModel):
     decided_at: datetime
     decided_by: int
 
-    
+class CaseClosureCreate(BaseModel):
+    """
+    What a coordinator supplies to close a case.
+
+    Only the closure reason is sent. The terminal status is derived from it
+    server-side, because which terminal status is legal depends on the case's
+    current status and the client has no way to know that.
+
+    Whether a note is mandatory comes from closure_reason.requires_note rather
+    than being hardcoded here, so adding a reason to the reference data does
+    not require a code change.
+    """
+
+    closure_reason_code: str
+    public_closure_note: str | None = Field(default=None, max_length=1000)
+
+    # required by trg_case_decision_validate when the case was referred
+    referred_to: str | None = Field(default=None, max_length=200)
+
+    @field_validator("closure_reason_code")
+    @classmethod
+    def closure_reason_must_be_iteration_one(cls, the_value: str) -> str:
+        """
+        Reject reasons seeded for later iterations.
+
+        reefcare_validate_decision() rejects anything with iteration_added > 1,
+        so listing the Iteration 1 codes here turns a trigger exception into a
+        readable message naming the valid options.
+        """
+
+        the_iteration_one_reasons = {
+            "referred_other_org",
+            "monitored_no_action",
+            "not_substantiated",
+            "no_responsible_partner",
+            "logged_for_reference",
+        }
+
+        if the_value not in the_iteration_one_reasons:
+            raise ValueError(
+                "closure_reason_code must be one of: "
+                + ", ".join(sorted(the_iteration_one_reasons))
+            )
+
+        return the_value
+
+
+class CaseClosureResponse(BaseModel):
+    """Confirmation that a case was closed."""
+
+    report_reference: str
+
+    # the terminal case_status.code the case landed in
+    status: str
+
+    closure_reason_code: str
+    closed_at: datetime   
