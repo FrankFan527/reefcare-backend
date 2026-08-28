@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from app.core.enums import CaseStatus
 
@@ -87,3 +87,46 @@ class CoordinatorCaseResponse(BaseModel):
     owner: CaseOwnerResponse
 
     evidence: list[EvidenceSummary] = []
+
+class InformationRequestCreate(BaseModel):
+    """
+    The coordinator's reason for asking the observer for more information.
+
+    API schema only. Iteration 1 has no information_request table: the reason
+    is written into case_event.note by reefcare_change_status(), which records
+    the status move and the note in one transaction.
+    """
+
+    reason: str = Field(min_length=1, max_length=500)
+
+    @field_validator("reason")
+    @classmethod
+    def reason_must_not_be_blank(cls, the_value: str) -> str:
+        """
+        A reason made only of spaces is not a reason.
+
+        This one is observer-visible, so an empty string would show up in
+        their timeline as an unexplained request for more information.
+        """
+
+        the_trimmed_reason = the_value.strip()
+
+        if the_trimmed_reason == "":
+            raise ValueError("reason must not be empty")
+
+        return the_trimmed_reason
+
+
+class InformationRequestResponse(BaseModel):
+    """Confirmation that the case moved to needs_more_info."""
+
+    report_reference: str
+
+    # the canonical database status code, e.g. "needs_more_info"
+    status: str
+
+    reason: str
+    requested_at: datetime
+
+
+    
