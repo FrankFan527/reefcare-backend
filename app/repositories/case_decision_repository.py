@@ -96,7 +96,7 @@ async def get_latest_decision(
                 ON r.report_id = cd.report_id
             WHERE r.report_reference = :report_reference
               AND r.deleted_at IS NULL
-            ORDER BY cd.decided_at DESC
+            ORDER BY cd.decided_at DESC, cd.case_decision_id DESC
             LIMIT 1
             """
         ),

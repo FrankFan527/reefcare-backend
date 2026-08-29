@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from app.core.enums import CaseStatus
 from app.schemas.common import APIModel
 
@@ -83,7 +83,7 @@ class CoordinatorCaseResponse(APIModel):
 
     evidence: list[EvidenceSummary]
 
-class InformationRequestCreate(BaseModel):
+class InformationRequestCreate(APIModel):
     """
     The coordinator's reason for asking the observer for more information.
 
@@ -112,7 +112,7 @@ class InformationRequestCreate(BaseModel):
         return the_trimmed_reason
 
 
-class InformationRequestResponse(BaseModel):
+class InformationRequestResponse(APIModel):
     """Confirmation that the case moved to needs_more_info."""
 
     report_reference: str
@@ -125,7 +125,7 @@ class InformationRequestResponse(BaseModel):
 
 
 
-class ResponseTypeDecisionCreate(BaseModel):
+class ResponseTypeDecisionCreate(APIModel):
     """
     A coordinator's Iteration 1 response-type decision on an owned case.
 
@@ -135,9 +135,11 @@ class ResponseTypeDecisionCreate(BaseModel):
     CaseDecision enum in core/enums.py, whose values do not exist in the
     database.
 
-    The three-versus-four question is still open with the team. Four are
-    accepted here because the CHECK constraint accepts four; narrowing to
-    three later is a one-line change.
+    Three response types, per the team decision on US5.4. The database CHECK
+    also permits no_responsible_partner, but that stays on the US5.5 closure
+    path: reefcare_close_report() derives it from the no_responsible_partner
+    closure reason, so it is still written to case_decision, just not
+    selectable here.
     """
 
     response_type: str
@@ -155,7 +157,6 @@ class ResponseTypeDecisionCreate(BaseModel):
             "monitoring_only",
             "refer_or_share",
             "intervention_required",
-            "no_responsible_partner",
         }
 
         if the_value not in the_permitted_response_types:
@@ -185,7 +186,7 @@ class ResponseTypeDecisionCreate(BaseModel):
         return self
 
 
-class ResponseTypeDecisionResponse(BaseModel):
+class ResponseTypeDecisionResponse(APIModel):
     """Confirmation that a decision was recorded."""
 
     report_reference: str
@@ -193,7 +194,7 @@ class ResponseTypeDecisionResponse(BaseModel):
     decided_at: datetime
     decided_by: int
 
-class CaseClosureCreate(BaseModel):
+class CaseClosureCreate(APIModel):
     """
     What a coordinator supplies to close a case.
 
@@ -240,7 +241,7 @@ class CaseClosureCreate(BaseModel):
         return the_value
 
 
-class CaseClosureResponse(BaseModel):
+class CaseClosureResponse(APIModel):
     """Confirmation that a case was closed."""
 
     report_reference: str

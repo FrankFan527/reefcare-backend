@@ -26,13 +26,14 @@ STATUSES_THAT_MAY_RECEIVE_A_DECISION: set[str] = {
     "monitoring",
     "referred",
 }
-
-# the four values case_decision_response_type_valid accepts
+# the three selectable via the decision endpoint, per the US5.4 team decision.
+# case_decision_response_type_valid also permits no_responsible_partner, but
+# that stays on the closure path: reefcare_close_report() derives it from the
+# no_responsible_partner closure reason
 PERMITTED_RESPONSE_TYPES: set[str] = {
     "monitoring_only",
     "refer_or_share",
     "intervention_required",
-    "no_responsible_partner",
 }
 
 
