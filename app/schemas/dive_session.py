@@ -8,6 +8,7 @@
 # Field names follow the API contract in the backend doc, not the raw column
 # names. The repository aliases between them.
 # ---------------------------------------------------------------------------
+from app.schemas.common import APIModel
 from datetime import date, datetime, timedelta, timezone
 
 from pydantic import BaseModel, Field, model_validator
