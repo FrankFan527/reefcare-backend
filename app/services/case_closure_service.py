@@ -164,13 +164,13 @@ async def close_case(
     # the terminal status must be reachable from where the case is now
     the_move_is_allowed = await transition_is_permitted(
         db=db,
-        from_status_code=the_case["current_status_code"],
+        from_status_code=the_case["status_code"],
         to_status_code=the_terminal_status_code,
     )
 
     if not the_move_is_allowed:
         raise WorkflowError(
-            f"A case in {the_case['current_status_code']} cannot be closed as "
+            f"A case in {the_case['status_code']} cannot be closed as "
             f"{closure_reason_code}, which would move it to "
             f"{the_terminal_status_code}"
         )

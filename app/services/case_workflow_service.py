@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import AuthorizationError, NotFoundError, WorkflowError
 from app.repositories.case_repository import (
     change_status,
-    get_case_ownership_and_status,
+    get_report_owner,
     transition_is_permitted,
 )
 
@@ -36,6 +36,9 @@ async def load_owned_case(
     """
     Fetch a case and confirm this coordinator owns it.
 
+    Uses get_report_owner(...), which returns claimed_by_user_id and
+    status_code for the report.
+
     Raises NotFoundError when the reference does not exist or the report was
     withdrawn, and AuthorizationError when it belongs to somebody else.
 
@@ -44,7 +47,7 @@ async def load_owned_case(
     they are not the owner and may not act on it.
     """
 
-    the_case = await get_case_ownership_and_status(
+    the_case = await get_report_owner(
         db=db,
         report_reference=report_reference,
     )
@@ -57,7 +60,7 @@ async def load_owned_case(
             f"Report {report_reference} is not owned by you"
         )
 
-    return the_case
+    return dict(the_case)
 
 
 async def validate_status_transition(
@@ -100,6 +103,9 @@ async def request_more_information(
     into case_event in the same transaction as the status move. That is what
     makes it visible in the observer's timeline without a separate table.
 
+    event_type is passed explicitly so the move records as info_requested
+    rather than the default status_change.
+
     The caller commits.
     """
 
@@ -111,14 +117,14 @@ async def request_more_information(
 
     await validate_status_transition(
         db=db,
-        from_status_code=the_case["current_status_code"],
+        from_status_code=the_case["status_code"],
         to_status_code=NEEDS_MORE_INFO_STATUS,
     )
 
     the_new_status_code = await change_status(
         db=db,
         report_reference=report_reference,
-        to_status_code=NEEDS_MORE_INFO_STATUS,
+        status_code=NEEDS_MORE_INFO_STATUS,
         actor_user_id=coordinator_id,
         note=reason,
         event_type=INFORMATION_REQUEST_EVENT,

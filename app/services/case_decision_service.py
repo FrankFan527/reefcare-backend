@@ -100,7 +100,7 @@ async def record_decision(
     )
 
     validate_case_is_ready_for_a_decision(
-        current_status_code=the_case["current_status_code"],
+        current_status_code=the_case["status_code"],
     )
 
     validate_response_type(
