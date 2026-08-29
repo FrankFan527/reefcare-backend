@@ -8,13 +8,15 @@
 # Field names follow the API contract in the backend doc, not the raw column
 # names. The repository aliases between them.
 # ---------------------------------------------------------------------------
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
+from pydantic import Field, model_validator
+
 from app.schemas.common import APIModel
-from datetime import date, datetime, timedelta, timezone
+MALAYSIA_TIMEZONE = ZoneInfo("Asia/Kuala_Lumpur")
 
-from pydantic import BaseModel, Field, model_validator
-
-
-class DiveSiteSummary(BaseModel):
+class DiveSiteSummary(APIModel):
     """
     The site a session took place at, as shown back to the observer.
 
@@ -28,7 +30,7 @@ class DiveSiteSummary(BaseModel):
     public_area_label: str
 
 
-class DiveSessionResponse(BaseModel):
+class DiveSessionResponse(APIModel):
     """
     One of the signed-in observer's dive sessions.
 
@@ -51,7 +53,7 @@ class DiveSessionResponse(BaseModel):
     approximate_end_time: datetime | None = None
 
 
-class DiveSessionCreate(BaseModel):
+class DiveSessionCreate(APIModel):
     """
     What an observer supplies to create a dive session.
 
@@ -72,18 +74,17 @@ class DiveSessionCreate(BaseModel):
     @model_validator(mode="after")
     def check_dive_date_is_not_in_the_future(self):
         """
-        A dive cannot have happened tomorrow.
+        A dive cannot have happened after today in Malaysia.
 
-        One day of tolerance is allowed on purpose. Malaysia is UTC+8, so a
-        dive logged at 1am local time is still the previous day in UTC, and a
-        strict comparison would reject a perfectly valid entry.
+        Compared against the local date rather than UTC. An earlier version
+        allowed a day of tolerance to avoid rejecting early-morning dives,
+        which had the side effect of accepting tomorrow's date entirely.
+        Using the actual local date removes both problems.
         """
 
-        the_latest_allowed_date = (
-            datetime.now(timezone.utc) + timedelta(days=1)
-        ).date()
+        the_today_in_malaysia = datetime.now(MALAYSIA_TIMEZONE).date()
 
-        if self.dive_date > the_latest_allowed_date:
+        if self.dive_date > the_today_in_malaysia:
             raise ValueError("dive_date cannot be in the future")
 
         return self
