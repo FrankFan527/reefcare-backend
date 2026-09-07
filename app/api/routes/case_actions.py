@@ -103,10 +103,10 @@ async def create_case_decision(
     return ResponseTypeDecisionResponse(
         report_reference=the_result["report_reference"],
         response_type=the_result["response_type"],
+        status=the_result["status"],
         decided_at=the_result["decided_at"],
         decided_by=the_result["decided_by"],
     )
-
 
 @router.post(
     "/reports/{report_reference}/close",

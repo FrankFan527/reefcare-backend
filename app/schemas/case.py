@@ -226,14 +226,22 @@ class ResponseTypeDecisionCreate(APIModel):
 
 class ResponseTypeDecisionResponse(APIModel):
     """
-    Confirmation that a decision was recorded.
+    Confirmation that a decision was recorded, and where it moved the case.
+
+    status is the canonical database code the case landed in, not a display
+    label. The observer-facing wording comes from case_status.observer_label,
+    so there is one source of truth for it rather than a Python map that can
+    drift from the reference data.
     """
 
     report_reference: str
     response_type: str
+
+    # the case_status.code the case is in after the decision
+    status: str
+
     decided_at: datetime
     decided_by: int
-
 
 class CaseClosureCreate(APIModel):
     """
